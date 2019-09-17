@@ -14,6 +14,25 @@
 	[InitializeOnLoad]
 	public static class SSGenerator
 	{
+		public enum Device
+		{
+			iPad,
+			iPhone,
+			iPhoneX,
+		}
+
+		public static Vector2Int GetPixel(this Device self)
+		{
+			switch(self)
+			{
+				case Device.iPad: return new Vector2Int(2048, 2732);
+				case Device.iPhone: return new Vector2Int(1242, 2208);
+				case Device.iPhoneX: return new Vector2Int(1242, 2688);
+			}
+
+			return new Vector2Int(1, 1);
+		}
+
 		private static string _capturePath;
 		private static int _counter;
 
@@ -50,34 +69,81 @@
 		[MenuItem("SSGenerator/Resize")]
 		private static void Resize()
 		{
-			var path = EditorUtility.OpenFolderPanel("Select screenshot folder", "", "");
+			var directoryPath = EditorUtility.OpenFolderPanel("Select screenshot folder", "", "");
 
-			if (string.IsNullOrEmpty(path))
+			if (string.IsNullOrEmpty(directoryPath))
 			{
 				return;
 			}
 
-			var files =  Directory.GetFiles(path);
+			var iPadPath = GetResizedPath(directoryPath, Device.iPad);
 
-			foreach (var file in files)
+			if (!Directory.Exists(iPadPath))
 			{
-				if (!file.EndsWith(".png"))
+				Directory.CreateDirectory(iPadPath);
+			}
+
+			var iPhonePath = GetResizedPath(directoryPath, Device.iPhone);
+
+			if (!Directory.Exists(iPhonePath))
+			{
+				Directory.CreateDirectory(iPhonePath);
+			}
+
+			var iPhoneXPath = GetResizedPath(directoryPath, Device.iPhoneX);
+
+			if (!Directory.Exists(iPhoneXPath))
+			{
+				Directory.CreateDirectory(iPhoneXPath);
+			}
+
+			var filePathes =  Directory.GetFiles(directoryPath);
+
+			int index = 0;
+
+			foreach (var filePath in filePathes)
+			{
+				if (!filePath.EndsWith(".png"))
 				{
 					continue;
 				}
 
-				Resize(file);
-				Debug.Log("hozon");
-				break;
+				ResizeProcess(directoryPath, filePath, index);
+
+				index++;
 			}
 		}
 
-		private static Texture2D Resize(string path)
+		private static void ResizeProcess(string directoryPath, string filePath, int index)
 		{
 			var src = new Texture2D(1, 1, TextureFormat.RGB24, false);
-			src.LoadImage(File.ReadAllBytes(path));
+			src.LoadImage(File.ReadAllBytes(filePath));
+			
+			var iPadTexture = Resize(src, Device.iPad);
+			var iPhoneTexture = Trim(iPadTexture, Device.iPhone);
+			var iPhoneXTexture = Trim(iPadTexture, Device.iPhone);
 
-			var dest = new Texture2D(2048,2732, TextureFormat.RGB24, false);
+			SaveResized(iPadTexture, directoryPath, index, Device.iPad);
+			SaveResized(iPhoneTexture, directoryPath, index, Device.iPhone);
+			SaveResized(iPhoneXTexture, directoryPath, index, Device.iPhoneX);
+		}
+
+		private static void SaveResized(Texture2D texture, string directoryPath, int index, Device device)
+		{
+			var png = texture.EncodeToPNG();
+			File.WriteAllBytes(GetResizedPath(directoryPath, device) + "/" + index + ".png", png);
+
+		}
+
+		private static Texture2D Resize(Texture2D src, Device ssType)
+		{
+			var size = ssType.GetPixel();
+			return Resize(src, size.x, size.y);
+		}
+
+		private static Texture2D Resize(Texture2D src, int width, int height)
+		{
+			var dest = new Texture2D(width, height, TextureFormat.RGB24, false);
 
 			var pixels = new Color[dest.width * dest.height];
 
@@ -94,12 +160,37 @@
 			dest.SetPixels(pixels);
 			dest.Apply();
 
-			var png = dest.EncodeToPNG();
-			File.WriteAllBytes(path + "_" + "trim.png", png);
-			return src;
+			return dest;
 		}
 
+		private static Texture2D Trim(Texture2D src, Device ssType)
+		{
+			var size = ssType.GetPixel();
+			return Trim(src, size.x, size.y);
+		}
 
+		private static Texture2D Trim(Texture2D src, int width, int height)
+		{
+			var offsetX = (src.width - width) / 2;
+			var offsetY = (src.height - height) / 2;
+
+			var dest = new Texture2D(width, height, TextureFormat.RGB24, false);
+
+			var pixels = new Color[dest.width * dest.height];
+
+			for (var y = 0; y < dest.height; y++)
+			{
+				for (var x = 0; x < dest.width; x++)
+				{
+					pixels[y * dest.width + x] = src.GetPixel(x + offsetX, y + offsetY);
+				}
+			}
+
+			dest.SetPixels(pixels);
+			dest.Apply();
+
+			return dest;
+		}
 
 		private static void Capture()
 		{
@@ -125,6 +216,11 @@
 		private static bool IsCapturing()
 		{
 			return !string.IsNullOrEmpty(_capturePath) && Application.isPlaying;
+		}
+
+		private static string GetResizedPath(string directoryPath, Device device)
+		{
+			return directoryPath + "/" + device;
 		}
 
 
