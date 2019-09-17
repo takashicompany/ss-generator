@@ -11,9 +11,24 @@
 	using UnityEditor;
 	using System.IO;
 
+	[InitializeOnLoad]
 	public static class SSGenerator
 	{
 		private static string _capturePath;
+		private static int _counter;
+
+		static SSGenerator()
+		{
+			EditorApplication.update += OnEditorApplicationUpdate;
+		}
+
+		private static void OnEditorApplicationUpdate()
+		{
+			if (IsCapturing())
+			{
+				Capture();
+			}
+		}
 
 		[MenuItem("SSGenerator/Start")]
 		public static void StartCapture()
@@ -32,6 +47,12 @@
 			}
 		}
 
+		private static void Capture()
+		{
+			_counter++;
+			ScreenCapture.CaptureScreenshot(GetCapturePath() + "/" + string.Format("{0:00000000}.png", _counter));
+		}
+
 		private static string GetProjectPath()
 		{
 			return Application.dataPath + "/..";
@@ -45,6 +66,11 @@
 		private static string GetCapturePath()
 		{
 			return GetRootPath() + "/" + _capturePath;
+		}
+
+		private static bool IsCapturing()
+		{
+			return !string.IsNullOrEmpty(_capturePath) && Application.isPlaying;
 		}
 
 
