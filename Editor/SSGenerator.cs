@@ -47,6 +47,60 @@
 			}
 		}
 
+		[MenuItem("SSGenerator/Resize")]
+		private static void Resize()
+		{
+			var path = EditorUtility.OpenFolderPanel("Select screenshot folder", "", "");
+
+			if (string.IsNullOrEmpty(path))
+			{
+				return;
+			}
+
+			var files =  Directory.GetFiles(path);
+
+			foreach (var file in files)
+			{
+				if (!file.EndsWith(".png"))
+				{
+					continue;
+				}
+
+				Resize(file);
+				Debug.Log("hozon");
+				break;
+			}
+		}
+
+		private static Texture2D Resize(string path)
+		{
+			var src = new Texture2D(1, 1, TextureFormat.RGB24, false);
+			src.LoadImage(File.ReadAllBytes(path));
+
+			var dest = new Texture2D(2048,2732, TextureFormat.RGB24, false);
+
+			var pixels = new Color[dest.width * dest.height];
+
+			for (var y = 0; y < dest.height; y++)
+			{
+				for (var x = 0; x < dest.width; x++)
+				{
+					var normalizedX = (float)x / (float)(dest.width - 1);
+					var normalizedY = (float)y / (float)(dest.height - 1);
+					pixels[y * dest.width + x] = src.GetPixelBilinear(normalizedX, normalizedY);
+				}
+			}
+
+			dest.SetPixels(pixels);
+			dest.Apply();
+
+			var png = dest.EncodeToPNG();
+			File.WriteAllBytes(path + "_" + "trim.png", png);
+			return src;
+		}
+
+
+
 		private static void Capture()
 		{
 			_counter++;
