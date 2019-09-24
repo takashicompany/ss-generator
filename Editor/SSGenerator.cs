@@ -21,6 +21,7 @@
 			iPhoneX,
 		}
 
+
 		public static Vector2Int GetPixel(this Device self)
 		{
 			switch(self)
@@ -135,13 +136,13 @@
 
 		}
 
-		private static Texture2D Resize(Texture2D src, Device ssType)
+		private static Texture2D Resize(Texture2D src, Device device, bool verticalBased)
 		{
-			var size = ssType.GetPixel();
-			return Resize(src, size.x, size.y);
+			var size = device.GetPixel();
+			return Resize(src, size.x, size.y, verticalBased);
 		}
 
-		private static Texture2D Resize(Texture2D src, int width, int height)
+		private static Texture2D Resize(Texture2D src, int width, int height, bool varticalBased)
 		{
 			var dest = new Texture2D(width, height, TextureFormat.RGB24, false);
 
@@ -159,7 +160,7 @@
 
 			dest.SetPixels(pixels);
 			dest.Apply();
-
+ 
 			return dest;
 		}
 
