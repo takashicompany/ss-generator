@@ -21,8 +21,15 @@
 			iPhoneX,
 		}
 
+		public enum ResizeOption
+		{
+			Portrait,
+			Landscape,
+		}
 
-		public static Vector2Int GetPixel(this Device self)
+#region サイズ関係
+
+		public static Vector2Int GetPortraitPixel(this Device self)
 		{
 			switch(self)
 			{
@@ -34,14 +41,24 @@
 			return new Vector2Int(1, 1);
 		}
 
+		public static Vector2Int GetPortraitPixelForResize(this Device self)
+		{
+			var pixel = GetPortraitPixel(self);
+			return new Vector2Int(-1, pixel.y);
+		}
+#endregion
+
+#region 変数
 		private static string _capturePath;
 		private static int _counter;
+#endregion
 
 		static SSGenerator()
 		{
 			EditorApplication.update += OnEditorApplicationUpdate;
 		}
 
+#region キャプチャ
 		private static void OnEditorApplicationUpdate()
 		{
 			if (IsCapturing())
@@ -67,6 +84,14 @@
 			}
 		}
 
+		private static void Capture()
+		{
+			_counter++;
+			ScreenCapture.CaptureScreenshot(GetCapturePath() + "/" + string.Format("{0:00000000}.png", _counter));
+		}
+#endregion
+
+#region リサイズのタスク
 		[MenuItem("SSGenerator/Resize")]
 		private static void Resize()
 		{
@@ -120,30 +145,49 @@
 			var src = new Texture2D(1, 1, TextureFormat.RGB24, false);
 			src.LoadImage(File.ReadAllBytes(filePath));
 			
-			var iPadTexture = Resize(src, Device.iPad);
-			var iPhoneTexture = Trim(iPadTexture, Device.iPhone);
-			var iPhoneXTexture = Trim(iPadTexture, Device.iPhone);
+			var iPadTexture = src.Resize(Device.iPad).Trim(Device.iPad);
+			var iPhoneTexture = src.Resize(Device.iPhone).Trim(Device.iPhone);
+			var iPhoneXTexture = src.Resize(Device.iPhoneX).Trim(Device.iPhoneX);
 
 			SaveResized(iPadTexture, directoryPath, index, Device.iPad);
 			SaveResized(iPhoneTexture, directoryPath, index, Device.iPhone);
 			SaveResized(iPhoneXTexture, directoryPath, index, Device.iPhoneX);
 		}
+#endregion
 
-		private static void SaveResized(Texture2D texture, string directoryPath, int index, Device device)
+#region リサイズの処理
+		private static Texture2D Resize(this Texture2D src, Device device)
 		{
-			var png = texture.EncodeToPNG();
-			File.WriteAllBytes(GetResizedPath(directoryPath, device) + "/" + index + ".png", png);
-
+			var size = device.GetPortraitPixelForResize();
+			return ResizeInternal(src, size.x, size.y);
 		}
 
-		private static Texture2D Resize(Texture2D src, Device device, bool verticalBased)
+		/// <summary>
+		/// 画像をリサイズして新しいインスタンスを返す
+		/// </summary>
+		/// <param name="src">元の画像</param>
+		/// <param name="width">幅。負数を指定すると高さを基準にアスペクト比を維持したサイズが指定される</param>
+		/// <param name="height">高さ。負数を指定すると幅を基準にアスペクト比を維持したサイズが指定される</param>
+		/// <returns></returns>
+		private static Texture2D ResizeInternal(this Texture2D src, int width, int height)
+		// Texture2DクラスにResize(bool)があるから関数名を変えてる
 		{
-			var size = device.GetPixel();
-			return Resize(src, size.x, size.y, verticalBased);
-		}
+			if (width < 0 && height < 0)
+			{
+				Debug.LogError("widthもheightも負数が指定されてます");
+				return null;
+			}
+			else if (width < 0)
+			{
+				var ratio = (float)height / src.height;
+				width = (int)(src.width * ratio);
+			}
+			else if (height < 0)
+			{
+				var ratio = (float)width / src.width;
+				height = (int)(src.width * ratio);
+			}
 
-		private static Texture2D Resize(Texture2D src, int width, int height, bool varticalBased)
-		{
 			var dest = new Texture2D(width, height, TextureFormat.RGB24, false);
 
 			var pixels = new Color[dest.width * dest.height];
@@ -164,13 +208,13 @@
 			return dest;
 		}
 
-		private static Texture2D Trim(Texture2D src, Device ssType)
+		private static Texture2D Trim(this Texture2D src, Device ssType)
 		{
-			var size = ssType.GetPixel();
+			var size = ssType.GetPortraitPixel();
 			return Trim(src, size.x, size.y);
 		}
 
-		private static Texture2D Trim(Texture2D src, int width, int height)
+		private static Texture2D Trim(this Texture2D src, int width, int height)
 		{
 			var offsetX = (src.width - width) / 2;
 			var offsetY = (src.height - height) / 2;
@@ -192,13 +236,19 @@
 
 			return dest;
 		}
+#endregion
 
-		private static void Capture()
+#region 加工した後の保存処理
+		
+		private static void SaveResized(Texture2D texture, string directoryPath, int index, Device device)
 		{
-			_counter++;
-			ScreenCapture.CaptureScreenshot(GetCapturePath() + "/" + string.Format("{0:00000000}.png", _counter));
+			var png = texture.EncodeToPNG();
+			File.WriteAllBytes(GetResizedPath(directoryPath, device) + "/" + index + ".png", png);
 		}
 
+#endregion
+
+#region パス
 		private static string GetProjectPath()
 		{
 			return Application.dataPath + "/..";
@@ -223,7 +273,6 @@
 		{
 			return directoryPath + "/" + device;
 		}
-
-
+#endregion
 	}
 }
