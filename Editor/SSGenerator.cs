@@ -48,9 +48,14 @@
 		}
 #endregion
 
+#region 定数
+		private const float _captureInterval = 1f;	// TODO 個々を動的に変えられるようにしたい
+#endregion
+
 #region 変数
 		private static string _capturePath;
 		private static int _counter;
+		private static float _remainNextCapture = 0;
 #endregion
 
 		static SSGenerator()
@@ -59,11 +64,23 @@
 		}
 
 #region キャプチャ
+
+		private static bool IsCapturing()
+		{
+			return !string.IsNullOrEmpty(_capturePath) && Application.isPlaying;
+		}
+
 		private static void OnEditorApplicationUpdate()
 		{
 			if (IsCapturing())
 			{
-				Capture();
+				_remainNextCapture -= Time.deltaTime;
+
+				if (_remainNextCapture <= 0)
+				{
+					_remainNextCapture = _captureInterval;
+					Capture();
+				}
 			}
 		}
 
@@ -262,11 +279,6 @@
 		private static string GetCapturePath()
 		{
 			return GetRootPath() + "/" + _capturePath;
-		}
-
-		private static bool IsCapturing()
-		{
-			return !string.IsNullOrEmpty(_capturePath) && Application.isPlaying;
 		}
 
 		private static string GetResizedPath(string directoryPath, Device device)
