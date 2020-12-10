@@ -87,6 +87,12 @@
 		[MenuItem("SSGenerator/Start")]
 		public static void StartCapture()
 		{
+			if (!Application.isPlaying)
+			{
+				NotificationAll("再生中に実行してください。");
+				return;
+			}
+
 			if (!Directory.Exists(GetRootPath()))
 			{
 				Directory.CreateDirectory(GetRootPath());
@@ -286,5 +292,38 @@
 			return directoryPath + "/" + device;
 		}
 #endregion
+
+#region オーバーレイメッセージ
+		// https://kan-kikuchi.hatenablog.com/entry/ShowNotificationを参考にした
+
+		private static void NotificationGameView(string message)
+		{
+			var assembly = typeof(UnityEditor.EditorWindow).Assembly;
+			var type = assembly.GetType("UnityEditor.GameView");
+			EditorWindow.GetWindow(type).ShowNotification(new GUIContent(message));
+		}
+
+		private static void NotificationSceneView(string message)
+		{
+			var assembly = typeof(UnityEditor.EditorWindow).Assembly;
+			var type = assembly.GetType("UnityEditor.SceneView");
+			EditorWindow.GetWindow(type).ShowNotification(new GUIContent(message));
+		}
+
+		private static void NotificationConsoleWindow(string message)
+		{
+			var assembly = typeof(UnityEditor.EditorWindow).Assembly;
+			var type = assembly.GetType("UnityEditor.ConsoleWindow");
+			EditorWindow.GetWindow(type).ShowNotification(new GUIContent(message));
+		}
+
+		private static void NotificationAll(string message)
+		{
+			NotificationGameView(message);
+			NotificationSceneView(message);
+			NotificationConsoleWindow(message);
+		}
+#endregion
+
 	}
 }
