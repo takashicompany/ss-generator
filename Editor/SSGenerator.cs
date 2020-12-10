@@ -14,14 +14,14 @@
 	[InitializeOnLoad]
 	public static class SSGenerator
 	{
-		public enum Device
+		private enum Device
 		{
 			iPad,
 			iPhone,
 			iPhoneX,
 		}
 
-		public enum ResizeOption
+		private enum ResizeOption
 		{
 			Portrait,
 			Landscape,
@@ -29,7 +29,7 @@
 
 #region サイズ関係
 
-		public static Vector2Int GetPortraitPixel(this Device self)
+		private static Vector2Int GetPortraitPixel(this Device self)
 		{
 			switch(self)
 			{
@@ -41,7 +41,7 @@
 			return new Vector2Int(1, 1);
 		}
 
-		public static Vector2Int GetPortraitPixelForResize(this Device self)
+		private static Vector2Int GetPortraitPixelForResize(this Device self)
 		{
 			var pixel = GetPortraitPixel(self);
 			return new Vector2Int(-1, pixel.y);
@@ -61,6 +61,11 @@
 		static SSGenerator()
 		{
 			EditorApplication.update += OnEditorApplicationUpdate;
+		}
+
+		private static int GetDevices()
+		{
+			return System.Enum.GetNames(typeof(Device)).Length;
 		}
 
 #region キャプチャ
@@ -83,7 +88,7 @@
 		{
 			if (IsCapturing())
 			{
-				_remainNextCapture -= Time.deltaTime;
+				_remainNextCapture -= Time.unscaledDeltaTime;
 
 				if (_remainNextCapture <= 0)
 				{
@@ -93,7 +98,7 @@
 			}
 		}
 
-		[MenuItem("SSGenerator/Start")]
+		[MenuItem("スクショ自動撮影/撮影を開始")]
 		public static void StartCapture()
 		{
 			if (!Application.isPlaying)
@@ -135,10 +140,10 @@
 #endregion
 
 #region リサイズのタスク
-		[MenuItem("SSGenerator/Resize")]
+		[MenuItem("スクショ自動撮影/フォルダ内の画像をストア用にリサイズ")]
 		private static void Resize()
 		{
-			var directoryPath = EditorUtility.OpenFolderPanel("自動でリサイズする画像が入ったフォルダを選んでください", "", "");
+			var directoryPath = EditorUtility.OpenFolderPanel("自動でリサイズしたい画像が入ったフォルダを選択してください。", "", "");
 
 			if (string.IsNullOrEmpty(directoryPath))
 			{
@@ -170,6 +175,8 @@
 
 			int index = 0;
 
+			var max = System.Enum.GetNames(typeof(Device)).Length * filePathes.Length;
+
 			foreach (var filePath in filePathes)
 			{
 				if (!filePath.EndsWith(".png"))
@@ -177,24 +184,73 @@
 					continue;
 				}
 
-				ResizeProcess(directoryPath, filePath, index);
+				if (!ResizeProcess(directoryPath, filePath, index, max))
+				{
+					Debug.LogError("リサイズを中断しました。");
+					return;
+				}
 
 				index++;
 			}
+
+			 EditorUtility.ClearProgressBar();
+
+			 var okList = new string[]	// 特に意味は無いです。
+			 {
+				"ありがとう！",
+				"おつかれ！",
+				"やるじゃん！",
+				"ご苦労！",
+				"いいね！",
+				"よくやった！",
+				"上出来だ！",
+				"ええやん！",
+				"さすが！",
+			 };
+
+			 EditorUtility.DisplayDialog("ストア用にリサイズ", "リサイズが完了しました！", okList[Random.Range(0, okList.Length)]);
 		}
 
-		private static void ResizeProcess(string directoryPath, string filePath, int index)
+		private static bool ResizeProcess(string directoryPath, string filePath, int index, int max)
 		{
+			var count = 0;
+
 			var src = new Texture2D(1, 1, TextureFormat.RGB24, false);
 			src.LoadImage(File.ReadAllBytes(filePath));
-			
-			var iPadTexture = src.Resize(Device.iPad).Trim(Device.iPad);
-			var iPhoneTexture = src.Resize(Device.iPhone).Trim(Device.iPhone);
-			var iPhoneXTexture = src.Resize(Device.iPhoneX).Trim(Device.iPhoneX);
 
-			SaveResized(iPadTexture, directoryPath, index, Device.iPad);
-			SaveResized(iPhoneTexture, directoryPath, index, Device.iPhone);
-			SaveResized(iPhoneXTexture, directoryPath, index, Device.iPhoneX);
+			foreach (Device device in System.Enum.GetValues(typeof(Device)))
+			{
+				if (DisplayResizeProgress(index * GetDevices() + count, max))
+				{
+					return false;
+				}
+
+				var texture = src.Resize(device).Trim(device);
+				SaveResized(texture, directoryPath, index, device);
+
+				count++;
+			}
+
+			// var iPadTexture = src.Resize(Device.iPad).Trim(Device.iPad);
+			// SaveResized(iPadTexture, directoryPath, index, Device.iPad);
+
+			// var iPhoneTexture = src.Resize(Device.iPhone).Trim(Device.iPhone);
+			// SaveResized(iPhoneTexture, directoryPath, index, Device.iPhone);
+			
+			// var iPhoneXTexture = src.Resize(Device.iPhoneX).Trim(Device.iPhoneX);
+			// SaveResized(iPhoneXTexture, directoryPath, index, Device.iPhoneX);
+
+			return true;
+		}
+
+		private static bool DisplayResizeProgress(int current, int max)
+		{
+			if (EditorUtility.DisplayCancelableProgressBar("リサイズ中...", current + "/" + max, (float)current / (float)max))
+			{
+				return true;
+			}
+
+			return false;
 		}
 #endregion
 
