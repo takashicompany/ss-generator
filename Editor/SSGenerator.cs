@@ -70,6 +70,15 @@
 			return !string.IsNullOrEmpty(_capturePath) && Application.isPlaying;
 		}
 
+		/// <summary>
+		/// 撮影時はアスペクト比 横3:縦4を推奨している
+		/// </summary>
+		/// <returns></returns>
+		private static bool IsValidAspectRatio()
+		{
+			return (float)Screen.width / (float)Screen.height > 0.7f;
+		}
+
 		private static void OnEditorApplicationUpdate()
 		{
 			if (IsCapturing())
@@ -89,8 +98,19 @@
 		{
 			if (!Application.isPlaying)
 			{
-				NotificationAll("再生中に実行してください。");
+				NotificationAll("ERROR\n再生中に実行してください。");
 				return;
+			}
+
+			if (!IsValidAspectRatio())
+			{
+				var r = (float)Screen.height / 4f;
+				var w = (float)Screen.width / r;
+				NotificationGameView("WARNING\n画面の比率は3:4に近いと良いです。\n現在は (" + w.ToString("F1") + " : 4) です。");
+			}
+			else
+			{
+				NotificationGameView("撮影を開始します");
 			}
 
 			if (!Directory.Exists(GetRootPath()))
