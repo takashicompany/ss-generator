@@ -138,7 +138,7 @@
 		[MenuItem("SSGenerator/Resize")]
 		private static void Resize()
 		{
-			var directoryPath = EditorUtility.OpenFolderPanel("Select screenshot folder", "", "");
+			var directoryPath = EditorUtility.OpenFolderPanel("自動でリサイズする画像が入ったフォルダを選んでください", "", "");
 
 			if (string.IsNullOrEmpty(directoryPath))
 			{
