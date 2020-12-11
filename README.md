@@ -1,4 +1,4 @@
-SS Geneator
+# SS Geneator
 
 # できること
 - Unity上でスクリーンショットを一定間隔で撮影する
