@@ -1,11 +1,8 @@
 ﻿namespace TakashiCompany.Unity.Editor.ScreenShot
 {
-	// ① フォルダを生成する
-	// ② スクリーンショットを自動で撮る
-	// ③ フォルダを指定する
-	// ④ 画像を選択できる
-	// ⑤ 指定したフォルダの下層にサイズ別でスクリーンショットを置ける場所を作る
-	// ⑥ リサイズする
+	// ストア向けのスクリーンショットの撮影を自動で行い、リサイズを半自動で行うエディター拡張
+	// 詳細な使い方はこちら
+	// https://github.com/takashicompany/ss-generator/blob/master/README.md
 
 	using UnityEngine;
 	using UnityEditor;
