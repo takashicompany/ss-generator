@@ -1,4 +1,4 @@
-﻿namespace TakashiCompany.Unity.Editor.ScreenShot
+﻿namespace takashicompany.Unity.Editor.ScreenShot
 {
 	// ストア向けのスクリーンショットの撮影を自動で行い、リサイズを半自動で行うエディター拡張
 	// 詳細な使い方はこちら
