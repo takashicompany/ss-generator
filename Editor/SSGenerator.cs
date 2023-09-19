@@ -11,36 +11,42 @@
 	[InitializeOnLoad]
 	public static class SSGenerator
 	{
-		private enum Device
+		private enum Size
 		{
-			iPad,
-			iPhone,
-			iPhoneX,
-		}
-
-		private enum ResizeOption
-		{
-			Portrait,
-			Landscape,
+			iPadPortrait,
+			iPhonePortrait,
+			iPhoneXPortrait,
+			GooglePlayFeatureGraphic
 		}
 
 #region サイズ関係
 
-		private static Vector2Int GetPortraitPixel(this Device self)
+		private static Vector2Int GetPortraitPixel(this Size self)
 		{
 			switch(self)
 			{
-				case Device.iPad: return new Vector2Int(2048, 2732);
-				case Device.iPhone: return new Vector2Int(1242, 2208);
-				case Device.iPhoneX: return new Vector2Int(1242, 2688);
+				case Size.iPadPortrait: return new Vector2Int(2048, 2732);
+				case Size.iPhonePortrait: return new Vector2Int(1242, 2208);
+				case Size.iPhoneXPortrait: return new Vector2Int(1242, 2688);
+				case Size.GooglePlayFeatureGraphic: return new Vector2Int(1024, 500);
 			}
 
-			return new Vector2Int(1, 1);
+			throw new System.NotImplementedException();
 		}
 
-		private static Vector2Int GetPortraitPixelForResize(this Device self)
+		private static Vector2Int GetMinusOneSize(this Size self)
 		{
 			var pixel = GetPortraitPixel(self);
+
+			if (pixel.x == pixel.y)
+			{
+				return pixel;
+			}
+			else if (pixel.x > pixel.y)
+			{
+				return new Vector2Int(pixel.x, -1);
+			}
+			
 			return new Vector2Int(-1, pixel.y);
 		}
 #endregion
@@ -62,7 +68,7 @@
 
 		private static int GetDevices()
 		{
-			return System.Enum.GetNames(typeof(Device)).Length;
+			return System.Enum.GetNames(typeof(Size)).Length;
 		}
 
 #region キャプチャ
@@ -147,32 +153,21 @@
 				return;
 			}
 
-			var iPadPath = GetResizedPath(directoryPath, Device.iPad);
-
-			if (!Directory.Exists(iPadPath))
+			foreach (Size device in System.Enum.GetValues(typeof(Size)))
 			{
-				Directory.CreateDirectory(iPadPath);
-			}
+				var devicePath = GetResizedPath(directoryPath, device);
 
-			var iPhonePath = GetResizedPath(directoryPath, Device.iPhone);
-
-			if (!Directory.Exists(iPhonePath))
-			{
-				Directory.CreateDirectory(iPhonePath);
-			}
-
-			var iPhoneXPath = GetResizedPath(directoryPath, Device.iPhoneX);
-
-			if (!Directory.Exists(iPhoneXPath))
-			{
-				Directory.CreateDirectory(iPhoneXPath);
+				if (!Directory.Exists(devicePath))
+				{
+					Directory.CreateDirectory(devicePath);
+				}
 			}
 
 			var filePathes =  Directory.GetFiles(directoryPath);
 
 			int index = 0;
 
-			var max = System.Enum.GetNames(typeof(Device)).Length * filePathes.Length;
+			var max = System.Enum.GetNames(typeof(Size)).Length * filePathes.Length;
 
 			foreach (var filePath in filePathes)
 			{
@@ -215,7 +210,7 @@
 			var src = new Texture2D(1, 1, TextureFormat.RGB24, false);
 			src.LoadImage(File.ReadAllBytes(filePath));
 
-			foreach (Device device in System.Enum.GetValues(typeof(Device)))
+			foreach (Size device in System.Enum.GetValues(typeof(Size)))
 			{
 				if (DisplayResizeProgress(index * GetDevices() + count, max))
 				{
@@ -227,15 +222,6 @@
 
 				count++;
 			}
-
-			// var iPadTexture = src.Resize(Device.iPad).Trim(Device.iPad);
-			// SaveResized(iPadTexture, directoryPath, index, Device.iPad);
-
-			// var iPhoneTexture = src.Resize(Device.iPhone).Trim(Device.iPhone);
-			// SaveResized(iPhoneTexture, directoryPath, index, Device.iPhone);
-			
-			// var iPhoneXTexture = src.Resize(Device.iPhoneX).Trim(Device.iPhoneX);
-			// SaveResized(iPhoneXTexture, directoryPath, index, Device.iPhoneX);
 
 			return true;
 		}
@@ -252,9 +238,9 @@
 #endregion
 
 #region リサイズの処理
-		private static Texture2D Resize(this Texture2D src, Device device)
+		private static Texture2D Resize(this Texture2D src, Size device)
 		{
-			var size = device.GetPortraitPixelForResize();
+			var size = device.GetMinusOneSize();
 			return ResizeInternal(src, size.x, size.y);
 		}
 
@@ -304,7 +290,7 @@
 			return dest;
 		}
 
-		private static Texture2D Trim(this Texture2D src, Device ssType)
+		private static Texture2D Trim(this Texture2D src, Size ssType)
 		{
 			var size = ssType.GetPortraitPixel();
 			return Trim(src, size.x, size.y);
@@ -336,7 +322,7 @@
 
 #region 加工した後の保存処理
 		
-		private static void SaveResized(Texture2D texture, string directoryPath, int index, Device device)
+		private static void SaveResized(Texture2D texture, string directoryPath, int index, Size device)
 		{
 			var png = texture.EncodeToPNG();
 			File.WriteAllBytes(GetResizedPath(directoryPath, device) + "/" + index + ".png", png);
@@ -360,7 +346,7 @@
 			return GetRootPath() + "/" + _capturePath;
 		}
 
-		private static string GetResizedPath(string directoryPath, Device device)
+		private static string GetResizedPath(string directoryPath, Size device)
 		{
 			return directoryPath + "/" + device;
 		}
